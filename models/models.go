@@ -14,6 +14,7 @@ type Archive struct {
 	Name       string   `json:"name"`
 	MomentsIds []string `json:"momentsIds"`
 	UpdatedAt  string   `json:"updated_at,omitempty"`
+	Deleted    bool     `json:"deleted,omitempty"`
 }
 
 type Moment struct {
@@ -24,6 +25,7 @@ type Moment struct {
 	Timestamp time.Time `json:"timestamp"`
 	UpdatedAt string    `json:"updated_at,omitempty"`
 	TagIDs    []string  `json:"tagIds"`
+	Deleted   bool      `json:"deleted,omitempty"`
 }
 
 type Tag struct {
@@ -32,6 +34,7 @@ type Tag struct {
 	Colour    string `json:"colour"`
 	RefCount  int    `json:"refCount"`
 	UpdatedAt string `json:"updated_at,omitempty"`
+	Deleted   bool   `json:"deleted,omitempty"`
 }
 
 type MediaFilter struct {

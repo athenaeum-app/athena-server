@@ -1,8 +1,5 @@
-// Package sync implements the library synchronisation handlers for the
-// Athenaeum API.  It exposes two HTTP handlers:
-//
-//   - GetLibrary  – GET  /api/library/{library_id}   (admin + viewer)
-//   - SyncLibrary – POST /api/library/{library_id}   (admin only)
+// - GetLibrary  – GET  /api/library/{library_id}   (admin + viewer)
+// - SyncLibrary – POST /api/library/{library_id}   (admin only)
 package sync
 
 import (
@@ -29,21 +26,15 @@ func writeError(w http.ResponseWriter, status int, msg string) {
 	writeJSON(w, status, map[string]string{"error": msg})
 }
 
-// claimsFromContext extracts the validated jwt.MapClaims that middleware.JWTAuth
-// stored in the request context.  Returns (claims, true) on success.
 func claimsFromContext(r *http.Request) (jwt.MapClaims, bool) {
 	claims, ok := r.Context().Value(middleware.UserClaimsKey).(jwt.MapClaims)
 	return claims, ok
 }
 
 // GetLibrary handles GET /api/library/{library_id}.
-// Both admin and viewer roles may call this endpoint.
-// It assembles and returns the full DataSnapshot for the requested library.
 func GetLibrary(w http.ResponseWriter, r *http.Request) {
 	libraryID := r.PathValue("library_id")
 
-	// Initialise the snapshot with non-nil maps so they serialise to {}
-	// rather than null when the library is empty.
 	snapshot := models.DataSnapshot{
 		Archives:         make(map[string]models.Archive),
 		Moments:          make(map[string]models.Moment),
@@ -52,7 +43,7 @@ func GetLibrary(w http.ResponseWriter, r *http.Request) {
 	}
 
 	archiveRows, err := database.DB.QueryContext(r.Context(),
-		`SELECT id, library_id, name FROM archives WHERE library_id = ?`,
+		`SELECT id, library_id, name, COALESCE(updated_at, ''), COALESCE(deleted, 0) FROM archives WHERE library_id = ?`,
 		libraryID,
 	)
 	if err != nil {
@@ -64,12 +55,12 @@ func GetLibrary(w http.ResponseWriter, r *http.Request) {
 
 	for archiveRows.Next() {
 		var a models.Archive
-		if err := archiveRows.Scan(&a.ID, &a.LibraryID, &a.Name); err != nil {
+		if err := archiveRows.Scan(&a.ID, &a.LibraryID, &a.Name, &a.UpdatedAt, &a.Deleted); err != nil {
 			log.Printf("sync: GetLibrary scan archive: %v", err)
 			writeError(w, http.StatusInternalServerError, "failed to read archives")
 			return
 		}
-		a.MomentsIds = []string{} // ensure non-null array
+		a.MomentsIds = []string{}
 		snapshot.Archives[a.ID] = a
 	}
 	if err := archiveRows.Err(); err != nil {
@@ -79,7 +70,7 @@ func GetLibrary(w http.ResponseWriter, r *http.Request) {
 	}
 
 	momentRows, err := database.DB.QueryContext(r.Context(),
-		`SELECT m.id, m.archive_id, m.title, m.content, m.timestamp
+		`SELECT m.id, m.archive_id, m.title, m.content, m.timestamp, COALESCE(m.updated_at, ''), COALESCE(m.deleted, 0)
            FROM moments m
            JOIN archives a ON a.id = m.archive_id
           WHERE a.library_id = ?`,
@@ -94,14 +85,13 @@ func GetLibrary(w http.ResponseWriter, r *http.Request) {
 
 	for momentRows.Next() {
 		var m models.Moment
-		if err := momentRows.Scan(&m.ID, &m.ArchiveID, &m.Title, &m.Content, &m.Timestamp); err != nil {
+		if err := momentRows.Scan(&m.ID, &m.ArchiveID, &m.Title, &m.Content, &m.Timestamp, &m.UpdatedAt, &m.Deleted); err != nil {
 			log.Printf("sync: GetLibrary scan moment: %v", err)
 			writeError(w, http.StatusInternalServerError, "failed to read moments")
 			return
 		}
-		m.TagIDs = []string{} // ensure non-null array
+		m.TagIDs = []string{}
 
-		// Keep the parent archive's MomentsIds slice in sync.
 		if arch, ok := snapshot.Archives[m.ArchiveID]; ok {
 			arch.MomentsIds = append(arch.MomentsIds, m.ID)
 			snapshot.Archives[m.ArchiveID] = arch
@@ -115,8 +105,9 @@ func GetLibrary(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// ─── FIX: Select updated_at and deleted ───
 	tagRows, err := database.DB.QueryContext(r.Context(),
-		`SELECT t.id, t.name, t.colour, mt.moment_id
+		`SELECT t.id, t.name, t.colour, COALESCE(t.updated_at, ''), COALESCE(t.deleted, 0), mt.moment_id
            FROM tags t
            JOIN moment_tags mt ON mt.tag_id = t.id
            JOIN moments m      ON m.id = mt.moment_id
@@ -132,23 +123,23 @@ func GetLibrary(w http.ResponseWriter, r *http.Request) {
 	defer tagRows.Close()
 
 	for tagRows.Next() {
-		var tagID, tagName, tagColour, momentID string
-		if err := tagRows.Scan(&tagID, &tagName, &tagColour, &momentID); err != nil {
+		var tagID, tagName, tagColour, tagUpdatedAt, momentID string
+		var tagDeleted bool
+		if err := tagRows.Scan(&tagID, &tagName, &tagColour, &tagUpdatedAt, &tagDeleted, &momentID); err != nil {
 			log.Printf("sync: GetLibrary scan tag row: %v", err)
 			writeError(w, http.StatusInternalServerError, "failed to read tags")
 			return
 		}
 
-		// Upsert tag into the snapshot, incrementing RefCount each time it
-		// appears in a moment_tags row.
 		tag := snapshot.Tags[tagID]
 		tag.ID = tagID
 		tag.Name = tagName
 		tag.Colour = tagColour
+		tag.UpdatedAt = tagUpdatedAt
+		tag.Deleted = tagDeleted
 		tag.RefCount++
 		snapshot.Tags[tagID] = tag
 
-		// Append the tag to the moment's TagIDs slice.
 		if moment, ok := snapshot.Moments[momentID]; ok {
 			moment.TagIDs = append(moment.TagIDs, tagID)
 			snapshot.Moments[momentID] = moment
@@ -163,9 +154,6 @@ func GetLibrary(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, snapshot)
 }
 
-// SyncLibrary handles POST /api/library/{library_id}.
-// It accepts a DataSnapshot payload and merges it into the database using
-// last-write-wins semantics on the Moment timestamp field.
 func SyncLibrary(w http.ResponseWriter, r *http.Request) {
 	libraryID := r.PathValue("library_id")
 
@@ -181,7 +169,6 @@ func SyncLibrary(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Decode the request payload.
 	var payload models.DataSnapshot
 	if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
 		log.Printf("sync: SyncLibrary decode body: %v", err)
@@ -189,14 +176,13 @@ func SyncLibrary(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Open a transaction — all mutations are atomic.
 	tx, err := database.DB.BeginTx(r.Context(), nil)
 	if err != nil {
 		log.Printf("sync: SyncLibrary begin tx: %v", err)
 		writeError(w, http.StatusInternalServerError, "failed to begin transaction")
 		return
 	}
-	defer tx.Rollback() // no-op after a successful Commit
+	defer tx.Rollback()
 
 	_, err = tx.ExecContext(r.Context(),
 		`INSERT INTO libraries (id, name)
@@ -212,11 +198,13 @@ func SyncLibrary(w http.ResponseWriter, r *http.Request) {
 
 	for _, archive := range payload.Archives {
 		_, err = tx.ExecContext(r.Context(),
-			`INSERT INTO archives (id, library_id, name)
-                  VALUES (?, ?, ?)
+			`INSERT INTO archives (id, library_id, name, updated_at, deleted)
+                  VALUES (?, ?, ?, ?, ?)
                   ON CONFLICT(id) DO UPDATE SET
-                      name = excluded.name`,
-			archive.ID, libraryID, archive.Name,
+                      name = excluded.name,
+                      updated_at = excluded.updated_at,
+                      deleted = excluded.deleted`,
+			archive.ID, libraryID, archive.Name, archive.UpdatedAt, archive.Deleted,
 		)
 		if err != nil {
 			log.Printf("sync: SyncLibrary upsert archive %s: %v", archive.ID, err)
@@ -227,12 +215,14 @@ func SyncLibrary(w http.ResponseWriter, r *http.Request) {
 
 	for _, tag := range payload.Tags {
 		_, err = tx.ExecContext(r.Context(),
-			`INSERT INTO tags (id, name, colour)
-                  VALUES (?, ?, ?)
+			`INSERT INTO tags (id, name, colour, updated_at, deleted)
+                  VALUES (?, ?, ?, ?, ?)
                   ON CONFLICT(id) DO UPDATE SET
                       name   = excluded.name,
-                      colour = excluded.colour`,
-			tag.ID, tag.Name, tag.Colour,
+                      colour = excluded.colour,
+                      updated_at = excluded.updated_at,
+                      deleted = excluded.deleted`,
+			tag.ID, tag.Name, tag.Colour, tag.UpdatedAt, tag.Deleted,
 		)
 		if err != nil {
 			log.Printf("sync: SyncLibrary upsert tag %s: %v", tag.ID, err)
@@ -243,15 +233,16 @@ func SyncLibrary(w http.ResponseWriter, r *http.Request) {
 
 	for _, moment := range payload.Moments {
 		_, err = tx.ExecContext(r.Context(),
-			`INSERT INTO moments (id, archive_id, title, content, timestamp)
-                  VALUES (?, ?, ?, ?, ?)
+			`INSERT INTO moments (id, archive_id, title, content, timestamp, updated_at, deleted)
+                  VALUES (?, ?, ?, ?, ?, ?, ?)
                   ON CONFLICT(id) DO UPDATE SET
                       archive_id = excluded.archive_id,
                       title      = excluded.title,
                       content    = excluded.content,
-                      timestamp  = excluded.timestamp
-                  WHERE excluded.timestamp > moments.timestamp`,
-			moment.ID, moment.ArchiveID, moment.Title, moment.Content, moment.Timestamp,
+                      timestamp  = excluded.timestamp,
+                      updated_at = excluded.updated_at,
+                      deleted    = excluded.deleted`,
+			moment.ID, moment.ArchiveID, moment.Title, moment.Content, moment.Timestamp, moment.UpdatedAt, moment.Deleted,
 		)
 		if err != nil {
 			log.Printf("sync: SyncLibrary upsert moment %s: %v", moment.ID, err)
@@ -319,8 +310,8 @@ func SyncLibrary(w http.ResponseWriter, r *http.Request) {
 		}
 
 		query := `DELETE FROM moments
-		           WHERE archive_id IN (SELECT id FROM archives WHERE library_id = ?)
-		             AND id NOT IN (` + strings.Join(placeholders, ",") + `)`
+                   WHERE archive_id IN (SELECT id FROM archives WHERE library_id = ?)
+                     AND id NOT IN (` + strings.Join(placeholders, ",") + `)`
 
 		if _, err := tx.ExecContext(r.Context(), query, args...); err != nil {
 			log.Printf("sync: SyncLibrary cleanup moments: %v", err)

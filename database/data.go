@@ -43,8 +43,7 @@ func InitDB() {
             archive_id TEXT NOT NULL,
             title TEXT NOT NULL,
             content TEXT NOT NULL,
-            timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
-            updated_at TEXT,
+            timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,            updated_at TEXT,
             FOREIGN KEY(archive_id) REFERENCES archives(id) ON DELETE CASCADE
         );
 
@@ -84,6 +83,9 @@ func InitDB() {
 		`ALTER TABLE moments ADD COLUMN updated_at TEXT;`,
 		`ALTER TABLE tags ADD COLUMN updated_at TEXT;`,
 		`ALTER TABLE archives ADD COLUMN updated_at TEXT;`,
+		`ALTER TABLE moments ADD COLUMN deleted BOOLEAN DEFAULT FALSE;`,
+		`ALTER TABLE tags ADD COLUMN deleted BOOLEAN DEFAULT FALSE;`,
+		`ALTER TABLE archives ADD COLUMN deleted BOOLEAN DEFAULT FALSE;`,
 	}
 
 	for _, migration := range migrations {
