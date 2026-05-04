@@ -35,6 +35,7 @@ func InitDB() {
             name TEXT NOT NULL,
             created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
             updated_at TEXT,
+            deleted BOOLEAN DEFAULT 0,
             FOREIGN KEY(library_id) REFERENCES libraries(id) ON DELETE CASCADE
         );
 
@@ -43,7 +44,9 @@ func InitDB() {
             archive_id TEXT NOT NULL,
             title TEXT NOT NULL,
             content TEXT NOT NULL,
-            timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,            updated_at TEXT,
+            timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
+            updated_at TEXT,
+            deleted BOOLEAN DEFAULT 0,
             FOREIGN KEY(archive_id) REFERENCES archives(id) ON DELETE CASCADE
         );
 
@@ -51,7 +54,8 @@ func InitDB() {
             id TEXT PRIMARY KEY,
             name TEXT UNIQUE NOT NULL,
             colour TEXT NOT NULL,
-            updated_at TEXT
+            updated_at TEXT,
+            deleted BOOLEAN DEFAULT 0
         );
 
         CREATE TABLE IF NOT EXISTS moment_tags (
@@ -83,9 +87,9 @@ func InitDB() {
 		`ALTER TABLE moments ADD COLUMN updated_at TEXT;`,
 		`ALTER TABLE tags ADD COLUMN updated_at TEXT;`,
 		`ALTER TABLE archives ADD COLUMN updated_at TEXT;`,
-		`ALTER TABLE moments ADD COLUMN deleted BOOLEAN DEFAULT FALSE;`,
-		`ALTER TABLE tags ADD COLUMN deleted BOOLEAN DEFAULT FALSE;`,
-		`ALTER TABLE archives ADD COLUMN deleted BOOLEAN DEFAULT FALSE;`,
+		`ALTER TABLE moments ADD COLUMN deleted BOOLEAN DEFAULT 0;`,
+		`ALTER TABLE tags ADD COLUMN deleted BOOLEAN DEFAULT 0;`,
+		`ALTER TABLE archives ADD COLUMN deleted BOOLEAN DEFAULT 0;`,
 	}
 
 	for _, migration := range migrations {
