@@ -92,9 +92,11 @@ func GetLibrary(w http.ResponseWriter, r *http.Request) {
 		}
 		m.TagIDs = []string{}
 
-		if arch, ok := snapshot.Archives[m.ArchiveID]; ok {
-			arch.MomentsIds = append(arch.MomentsIds, m.ID)
-			snapshot.Archives[m.ArchiveID] = arch
+		if !m.Deleted {
+			if arch, ok := snapshot.Archives[m.ArchiveID]; ok {
+				arch.MomentsIds = append(arch.MomentsIds, m.ID)
+				snapshot.Archives[m.ArchiveID] = arch
+			}
 		}
 
 		snapshot.Moments[m.ID] = m
