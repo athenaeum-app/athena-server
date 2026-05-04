@@ -13,6 +13,7 @@ type Archive struct {
 	LibraryID  string   `json:"library_id"`
 	Name       string   `json:"name"`
 	MomentsIds []string `json:"momentsIds"`
+	UpdatedAt  string   `json:"updated_at,omitempty"`
 }
 
 type Moment struct {
@@ -21,14 +22,16 @@ type Moment struct {
 	Title     string    `json:"title"`
 	Content   string    `json:"content"`
 	Timestamp time.Time `json:"timestamp"`
+	UpdatedAt string    `json:"updated_at,omitempty"`
 	TagIDs    []string  `json:"tagIds"`
 }
 
 type Tag struct {
-	ID       string `json:"id"`
-	Name     string `json:"name"`
-	Colour   string `json:"colour"`
-	RefCount int    `json:"refCount"`
+	ID        string `json:"id"`
+	Name      string `json:"name"`
+	Colour    string `json:"colour"`
+	RefCount  int    `json:"refCount"`
+	UpdatedAt string `json:"updated_at,omitempty"`
 }
 
 type MediaFilter struct {

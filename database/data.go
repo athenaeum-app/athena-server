@@ -34,6 +34,7 @@ func InitDB() {
             library_id TEXT NOT NULL,
             name TEXT NOT NULL,
             created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            updated_at TEXT,
             FOREIGN KEY(library_id) REFERENCES libraries(id) ON DELETE CASCADE
         );
 
@@ -43,13 +44,15 @@ func InitDB() {
             title TEXT NOT NULL,
             content TEXT NOT NULL,
             timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
+            updated_at TEXT,
             FOREIGN KEY(archive_id) REFERENCES archives(id) ON DELETE CASCADE
         );
 
         CREATE TABLE IF NOT EXISTS tags (
             id TEXT PRIMARY KEY,
             name TEXT UNIQUE NOT NULL,
-            colour TEXT NOT NULL
+            colour TEXT NOT NULL,
+            updated_at TEXT
         );
 
         CREATE TABLE IF NOT EXISTS moment_tags (
@@ -75,6 +78,16 @@ func InitDB() {
 	_, err = DB.Exec(schema)
 	if err != nil {
 		log.Fatal("Failed to execute schema:", err)
+	}
+
+	migrations := []string{
+		`ALTER TABLE moments ADD COLUMN updated_at TEXT;`,
+		`ALTER TABLE tags ADD COLUMN updated_at TEXT;`,
+		`ALTER TABLE archives ADD COLUMN updated_at TEXT;`,
+	}
+
+	for _, migration := range migrations {
+		DB.Exec(migration)
 	}
 
 	log.Println("Database started")
