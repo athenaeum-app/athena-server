@@ -22,7 +22,7 @@ func AdminPassword() string {
 }
 
 func ViewerPassword() string {
-	if p := os.Getenv("VIEWER_PASSWORD"); p != "" {
+	if p := os.Getenv("PASSWORD"); p != "" {
 		return p
 	}
 	return "viewer"
