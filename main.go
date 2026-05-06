@@ -5,10 +5,10 @@ import (
 	"log"
 	"net/http"
 
+	"github.com/athenaeum-app/server/action"
 	"github.com/athenaeum-app/server/auth"
 	"github.com/athenaeum-app/server/database"
 	"github.com/athenaeum-app/server/middleware"
-	"github.com/athenaeum-app/server/sync"
 )
 
 func main() {
@@ -17,16 +17,15 @@ func main() {
 
 	mux.HandleFunc("GET /api/health", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
-		fmt.Fprint(w, `{"status":"Athenaeum Core Online"}`)
+		fmt.Fprint(w, `{"status":"Athenaeum Server Online!"}`)
 	})
 
-	// Public Auth — single endpoint, no registration in the locked-box model.
 	mux.HandleFunc("POST /auth/login", auth.Login)
 
-	// Protected Sync Routes (wrapped in JWT Auth).
-	// Role enforcement (admin vs. viewer) is handled inside the handlers.
-	mux.Handle("GET /api/library/{library_id}", middleware.JWTAuth(http.HandlerFunc(sync.GetLibrary)))
-	mux.Handle("POST /api/library/{library_id}", middleware.JWTAuth(http.HandlerFunc(sync.SyncLibrary)))
+	mux.Handle("POST /api/library", middleware.JWTAuth(http.HandlerFunc(action.HandleAction)))
+	mux.Handle("GET /api/library", middleware.JWTAuth(http.HandlerFunc(action.GetLibrary)))
+
+	mux.HandleFunc("GET /api/version", action.GetVersion)
 
 	handler := middleware.CORS(mux)
 	port := ":8080"

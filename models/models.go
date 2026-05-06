@@ -1,20 +1,14 @@
 package models
 
-import "time"
-
-type Library struct {
-	ID        string    `json:"id"`
-	Name      string    `json:"name"`
-	CreatedAt time.Time `json:"createdAt"`
-}
+import (
+	"encoding/json"
+	"time"
+)
 
 type Archive struct {
 	ID         string   `json:"uuid"`
-	LibraryID  string   `json:"library_id"`
 	Name       string   `json:"name"`
 	MomentsIds []string `json:"momentsIds"`
-	UpdatedAt  string   `json:"updated_at,omitempty"`
-	Deleted    bool     `json:"deleted,omitempty"`
 }
 
 type Moment struct {
@@ -23,18 +17,14 @@ type Moment struct {
 	Title     string    `json:"title"`
 	Content   string    `json:"content"`
 	Timestamp time.Time `json:"timestamp"`
-	UpdatedAt string    `json:"updated_at,omitempty"`
 	TagIDs    []string  `json:"tagIds"`
-	Deleted   bool      `json:"deleted,omitempty"`
 }
 
 type Tag struct {
-	ID        string `json:"id"`
-	Name      string `json:"name"`
-	Colour    string `json:"colour"`
-	RefCount  int    `json:"refCount"`
-	UpdatedAt string `json:"updated_at,omitempty"`
-	Deleted   bool   `json:"deleted,omitempty"`
+	ID       string `json:"id"`
+	Name     string `json:"name"`
+	Colour   string `json:"colour"`
+	RefCount int    `json:"refCount"`
 }
 
 type MediaFilter struct {
@@ -51,7 +41,6 @@ type LinkPreview struct {
 }
 
 type DataSnapshot struct {
-	Version          string                 `json:"version"`
 	Archives         map[string]Archive     `json:"archives"`
 	Moments          map[string]Moment      `json:"moments"`
 	Tags             map[string]Tag         `json:"tags"`
@@ -62,4 +51,15 @@ type Asset struct {
 	ID       string `json:"id"`
 	FileName string `json:"file_name"`
 	LocalURI string `json:"local_uri"`
+}
+
+type ActionRequest struct {
+	Actions []Action `json:"actions"`
+}
+
+type Action struct {
+	Type     string          `json:"type"`   // "CREATE", "UPDATE", "DELETE"
+	Target   string          `json:"target"` // "ARCHIVE", "MOMENT", "TAG
+	TargetID string          `json:"target_id"`
+	Body     json.RawMessage `json:"body"`
 }

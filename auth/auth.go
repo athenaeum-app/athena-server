@@ -6,6 +6,7 @@ package auth
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"time"
 
@@ -44,12 +45,6 @@ func Login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Determine the role by comparing against the configured passwords.
-	// Constant-time comparison is not strictly necessary here because the
-	// passwords are not user-supplied secrets stored in a database — they are
-	// server-side configuration values — but we keep the check simple and
-	// direct.  Admin is checked first so that if both passwords happen to be
-	// equal the more-privileged role wins.
 	var role string
 	switch creds.Password {
 	case config.AdminPassword():
@@ -80,4 +75,5 @@ func Login(w http.ResponseWriter, r *http.Request) {
 		"token": signed,
 		"role":  role,
 	})
+	fmt.Println("✅ User authenticated.")
 }
