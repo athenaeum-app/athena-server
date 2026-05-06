@@ -3,6 +3,7 @@ package config
 import (
 	"crypto/sha256"
 	"os"
+	"strconv"
 )
 
 func JWTSecret() []byte {
@@ -26,4 +27,20 @@ func ViewerPassword() string {
 		return p
 	}
 	return "viewer"
+}
+
+func UploadLimit() int64 {
+	limitStr := os.Getenv("MAX_UPLOAD_MB")
+
+	if limitStr == "" {
+		return 500 << 20
+	}
+
+	limitMB, err := strconv.ParseInt(limitStr, 10, 64)
+
+	if err != nil || limitMB <= 0 {
+		return 500 << 20
+	}
+
+	return limitMB << 20
 }

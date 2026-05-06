@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"os"
 
 	"github.com/athenaeum-app/server/action"
 	"github.com/athenaeum-app/server/auth"
@@ -11,7 +12,18 @@ import (
 	"github.com/athenaeum-app/server/middleware"
 )
 
+func setupFolders() {
+	if err := os.MkdirAll("./data/", 0755); err != nil {
+		log.Fatal("Failed to create backups folder:", err)
+	}
+	if err := os.MkdirAll("./data/uploads", 0755); err != nil {
+		log.Fatal("Failed to create uploads folder:", err)
+	}
+}
+
 func main() {
+	setupFolders()
+
 	database.InitDB()
 	mux := http.NewServeMux()
 
@@ -21,6 +33,11 @@ func main() {
 	})
 
 	mux.HandleFunc("POST /auth/login", auth.Login)
+
+	fileServer := http.FileServer(http.Dir("./data/uploads"))
+	mux.Handle("GET /uploads/", http.StripPrefix("/uploads/", fileServer))
+
+	mux.Handle("POST /api/upload", middleware.JWTAuth(http.HandlerFunc(action.UploadFile)))
 
 	mux.Handle("POST /api/library", middleware.JWTAuth(http.HandlerFunc(action.HandleAction)))
 	mux.Handle("GET /api/library", middleware.JWTAuth(http.HandlerFunc(action.GetLibrary)))

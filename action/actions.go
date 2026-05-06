@@ -3,10 +3,17 @@ package action
 import (
 	"encoding/json"
 	"fmt"
+	"io"
 	"log"
 	"net/http"
+	"os"
+	"path/filepath"
+	"regexp"
+	"strings"
 	"sync/atomic"
+	"time"
 
+	"github.com/athenaeum-app/server/config"
 	"github.com/athenaeum-app/server/database"
 	"github.com/athenaeum-app/server/middleware"
 	"github.com/athenaeum-app/server/models"
@@ -18,8 +25,9 @@ var libraryVersion atomic.Uint64
 func GetVersion(w http.ResponseWriter, r *http.Request) {
 	currentVersion := libraryVersion.Load()
 
-	writeJSON(w, http.StatusOK, map[string]uint64{
-		"version": currentVersion,
+	writeJSON(w, http.StatusOK, map[string]any{
+		"version":        currentVersion,
+		"maxUploadBytes": config.UploadLimit(),
 	})
 }
 
@@ -185,7 +193,7 @@ func HandleAction(w http.ResponseWriter, r *http.Request) {
 				}
 				tx.ExecContext(r.Context(),
 					`INSERT INTO archives (id, name) VALUES (?, ?)
-	                     ON CONFLICT(id) DO UPDATE SET name=excluded.name`,
+                         ON CONFLICT(id) DO UPDATE SET name=excluded.name`,
 					a.ID, a.Name,
 				)
 			}
@@ -209,8 +217,8 @@ func HandleAction(w http.ResponseWriter, r *http.Request) {
 
 				tx.ExecContext(r.Context(),
 					`INSERT INTO moments (id, archive_id, title, content, timestamp)
-	                     VALUES (?, ?, ?, ?, ?)
-	                     ON CONFLICT(id) DO UPDATE SET title=excluded.title, content=excluded.content, archive_id=excluded.archive_id`,
+                         VALUES (?, ?, ?, ?, ?)
+                         ON CONFLICT(id) DO UPDATE SET title=excluded.title, content=excluded.content, archive_id=excluded.archive_id`,
 					m.ID, m.ArchiveID, m.Title, m.Content, m.Timestamp,
 				)
 
@@ -240,7 +248,7 @@ func HandleAction(w http.ResponseWriter, r *http.Request) {
 				}
 				tx.ExecContext(r.Context(),
 					`INSERT INTO tags (id, name, colour) VALUES (?, ?, ?)
-	                     ON CONFLICT(id) DO UPDATE SET name=excluded.name, colour=excluded.colour`,
+                         ON CONFLICT(id) DO UPDATE SET name=excluded.name, colour=excluded.colour`,
 					t.ID, t.Name, t.Colour,
 				)
 			}
@@ -259,4 +267,52 @@ func HandleAction(w http.ResponseWriter, r *http.Request) {
 
 	writeJSON(w, http.StatusOK, map[string]string{"status": "actions processed successfully"})
 	fmt.Println("✅ Action processed successfully")
+}
+
+func SanitizeFilename(name string) string {
+	reg := regexp.MustCompile(`[^a-zA-Z0-9.\-_]+`)
+
+	safeName := reg.ReplaceAllString(name, "_")
+
+	return strings.ToLower(safeName)
+}
+
+func UploadFile(w http.ResponseWriter, r *http.Request) {
+	maxBytes := config.UploadLimit()
+
+	r.Body = http.MaxBytesReader(w, r.Body, maxBytes)
+
+	if err := r.ParseMultipartForm(32 << 20); err != nil {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusRequestEntityTooLarge)
+		fmt.Fprintf(w, `{"error": "File exceeds the %dMB limit"}`, maxBytes>>20)
+		return
+	}
+
+	file, handler, err := r.FormFile("file")
+	if err != nil {
+		http.Error(w, `{"error": "Error retrieving file from request"}`, http.StatusBadRequest)
+		return
+	}
+	defer file.Close()
+
+	cleanName := SanitizeFilename(handler.Filename)
+
+	finalFilename := fmt.Sprintf("%d_%s", time.Now().Unix(), cleanName)
+
+	savePath := filepath.Join("./data/uploads", finalFilename)
+
+	dst, err := os.Create(savePath)
+	if err != nil {
+		http.Error(w, `{"error": "Error saving file to server"}`, http.StatusInternalServerError)
+		return
+	}
+	defer dst.Close()
+	io.Copy(dst, file)
+
+	serverURL := fmt.Sprintf("/uploads/%s", finalFilename)
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	fmt.Fprintf(w, `{"url": "%s"}`, serverURL)
 }
