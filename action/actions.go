@@ -8,7 +8,9 @@ import (
 	"sync/atomic"
 
 	"github.com/athenaeum-app/server/database"
+	"github.com/athenaeum-app/server/middleware"
 	"github.com/athenaeum-app/server/models"
+	"github.com/golang-jwt/jwt/v5"
 )
 
 var libraryVersion atomic.Uint64
@@ -137,6 +139,20 @@ func PrintActionLog(action models.Action) {
 
 func HandleAction(w http.ResponseWriter, r *http.Request) {
 	fmt.Println("✅ Action received.")
+
+	claims, ok := r.Context().Value(middleware.UserClaimsKey).(jwt.MapClaims)
+	if !ok {
+		writeError(w, http.StatusUnauthorized, "invalid token claims")
+		return
+	}
+
+	role, _ := claims["role"].(string)
+
+	if role != "admin" {
+		log.Printf("Blocked: Viewer attempted to mutate data.")
+		writeError(w, http.StatusForbidden, "Forbidden: Admin access required to modify library")
+		return
+	}
 
 	var req models.ActionRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
