@@ -7,10 +7,6 @@ import (
 )
 
 func JWTSecret() []byte {
-	if s := os.Getenv("JWT_SECRET"); s != "" {
-		return []byte(s)
-	}
-
 	hash := sha256.Sum256([]byte(AdminPassword() + "athena-secure-salt"))
 	return hash[:]
 }
