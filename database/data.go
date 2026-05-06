@@ -12,7 +12,7 @@ var DB *sql.DB
 func InitDB() {
 	var err error
 
-	DB, err = sql.Open("sqlite", "./athenaeum.db")
+	DB, err = sql.Open("sqlite", "./data/athenaeum.db")
 	if err != nil {
 		log.Fatal("🚨 Failed to open database:", err)
 	}

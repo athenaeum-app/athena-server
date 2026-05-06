@@ -149,7 +149,7 @@ func HandleAction(w http.ResponseWriter, r *http.Request) {
 	role, _ := claims["role"].(string)
 
 	if role != "admin" {
-		log.Printf("Blocked: Viewer attempted to mutate data.")
+		log.Printf("Forbidden: Viewer attempted to mutate data.")
 		writeError(w, http.StatusForbidden, "Forbidden: Admin access required to modify library")
 		return
 	}
