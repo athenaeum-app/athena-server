@@ -10,6 +10,7 @@ import (
 	"github.com/athenaeum-app/server/auth"
 	"github.com/athenaeum-app/server/database"
 	"github.com/athenaeum-app/server/middleware"
+	"github.com/joho/godotenv"
 )
 
 func setupFolders() {
@@ -22,6 +23,11 @@ func setupFolders() {
 }
 
 func main() {
+	err := godotenv.Load()
+	if err != nil {
+		log.Println("No .env file found, using system environment variables")
+	}
+
 	setupFolders()
 
 	database.InitDB()
