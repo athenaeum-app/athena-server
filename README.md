@@ -41,6 +41,14 @@ services:
       
       # MAX_UPLOAD_MB limits the file size for attachments. This is in MB
       - MAX_UPLOAD_MB=50
+
+      # BACKUP_INTERVAL sets how often the server automatically creates a backup. 
+      # Valid time units are "h" (hours) or "m" (minutes). Leave blank or remove to disable automated backups.
+      - BACKUP_INTERVAL=2h
+
+      # BACKUP_RETENTION is how many backup files to keep on disk before automatically deleting the oldest ones.
+      # Defaults to 7 if not specified.
+      - BACKUP_RETENTION=12
     volumes:
       # Only change if you know what you are doing!
       - ./athena-data:/app/data
@@ -79,3 +87,12 @@ By default, the `docker-compose.yml` binds a local folder (`./athena-data`) to t
 This ensures that your SQLite database, uploaded media, and configuration files remain safe and persistent even if the Docker container is restarted, updated, or destroyed. **Make sure to back up this folder regularly!**
 
 Please test persistence first before fully creating entries.
+
+## Backups
+Automatic backups of the sql database is available and configurable via the environment variables `BACKUP_INTERVAL` and `BACKUP_RETENTION`.
+If backups are enabled, the server will generate a new backup file at the specified interval and keep the specified number of backups, deleting old ones as needed. To restore a backup:
+- Stop the server (`docker-compose down`)
+- Select the backup file you want to restore (`athenaeum_YEAR-MONTH-DAY-TIME.db`)
+- Replace `athenaeum.db` located in the data directory (default is `./athena-data`) with the selected backup file. Make sure that the backup is renamed to `athenaeum.db`.
+- Restart the server using `docker-compose up -d`.
+- Verify that the backup has been restored successfully.

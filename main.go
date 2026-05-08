@@ -31,6 +31,7 @@ func main() {
 	setupFolders()
 
 	database.InitDB()
+	database.StartBackupWorker()
 	mux := http.NewServeMux()
 
 	mux.HandleFunc("GET /api/health", func(w http.ResponseWriter, r *http.Request) {

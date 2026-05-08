@@ -48,10 +48,9 @@ func writeError(w http.ResponseWriter, status int, message string) {
 
 func GetLibrary(w http.ResponseWriter, r *http.Request) {
 	snapshot := models.DataSnapshot{
-		Archives:         make(map[string]models.Archive),
-		Moments:          make(map[string]models.Moment),
-		Tags:             make(map[string]models.Tag),
-		LinkPreviewCache: make(map[string]models.LinkPreview),
+		Archives: make(map[string]models.Archive),
+		Moments:  make(map[string]models.Moment),
+		Tags:     make(map[string]models.Tag),
 	}
 
 	archiveRows, err := database.DB.QueryContext(r.Context(), `SELECT id, name FROM archives`)

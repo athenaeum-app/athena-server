@@ -41,10 +41,9 @@ type LinkPreview struct {
 }
 
 type DataSnapshot struct {
-	Archives         map[string]Archive     `json:"archives"`
-	Moments          map[string]Moment      `json:"moments"`
-	Tags             map[string]Tag         `json:"tags"`
-	LinkPreviewCache map[string]LinkPreview `json:"linkPreviewCache"`
+	Archives map[string]Archive `json:"archives"`
+	Moments  map[string]Moment  `json:"moments"`
+	Tags     map[string]Tag     `json:"tags"`
 }
 
 type Asset struct {
