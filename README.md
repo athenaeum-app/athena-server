@@ -1,6 +1,4 @@
 # Athena Server
-**Disclaimer:** Please see the disclaimer in the [Organization Profile](https://github.com/athenaeum-app/.github/blob/master/profile/README.md).
-
 The official Go-based self-hosted backend for the Athena app.
 This is an optional part of Athena that allows for self-hosted libraries.
 Athena servers will provide the following if used:
