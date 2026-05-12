@@ -10,8 +10,8 @@ Athena servers will provide the following if used:
 * **User Authentication:** Lock down access to your libraries with server-specific credentials.
 * **Multi-Device Syncing:** Seamlessly access and push changes to your libraries across an unlimited number of devices.
 * **Library Sharing:** Grant access to your libraries so trusted friends or team members can view or collaborate.
----
 
+---
 ## Quick Start (Docker Compose)
 
 The easiest and recommended way to deploy the Athena Server is via Docker.
@@ -69,30 +69,33 @@ docker-compose up -d
 ```
 
 ---
-
 ## Configuration Guide
+
 The server behavior is controlled entirely through environment variables. Be sure to update the defaults before exposing your server to the internet.
 
 | Variable | Default | Description |
-| :--- | :--- | :--- |
+| --- | --- | --- |
 | `ADMIN_PASSWORD` | `admin` | The master password used to authenticate as an admin. Required to publish libraries, mutate data, and manage settings. |
 | `PASSWORD` | `password` | The standard viewer/collaborator password. Give this to people you want to share your library with. |
 | `MAX_UPLOAD_MB` | `50` | The maximum file size (in Megabytes) allowed for media/file uploads. |
+| `BACKUP_INTERVAL` | `2h` | Sets how often the server automatically creates a database backup (e.g., `2h` or `30m`). Leave blank to disable automated backups. |
+| `BACKUP_RETENTION` | `7` | The maximum number of backup files to keep on disk before automatically deleting the oldest ones. |
 
 ---
 
 ## Data Persistence
-By default, the `docker-compose.yml` binds a local folder (`./athena-data`) to the container's internal `/app/data` directory. 
+By default, the `docker-compose.yml` binds a local folder (`./athena-data`) to the container's internal `/app/data` directory.
 
 This ensures that your SQLite database, uploaded media, and configuration files remain safe and persistent even if the Docker container is restarted, updated, or destroyed. **Make sure to back up this folder regularly!**
 
 Please test persistence first before fully creating entries.
 
 ## Backups
-Automatic backups of the sql database is available and configurable via the environment variables `BACKUP_INTERVAL` and `BACKUP_RETENTION`.
+Automatic backups of the SQL database are available and configurable via the environment variables `BACKUP_INTERVAL` and `BACKUP_RETENTION`.
 If backups are enabled, the server will generate a new backup file at the specified interval and keep the specified number of backups, deleting old ones as needed. To restore a backup:
-- Stop the server (`docker-compose down`)
-- Select the backup file you want to restore (`athenaeum_YEAR-MONTH-DAY-TIME.db`)
-- Replace `athenaeum.db` located in the data directory (default is `./athena-data`) with the selected backup file. Make sure that the backup is renamed to `athenaeum.db`.
-- Restart the server using `docker-compose up -d`.
-- Verify that the backup has been restored successfully.
+
+* Stop the server (`docker-compose down`).
+* Select the backup file you want to restore (`athenaeum_YEAR-MONTH-DAY-TIME.db`).
+* Replace `athenaeum.db` located in the data directory (default is `./athena-data`) with the selected backup file. Make sure that the backup is renamed to `athenaeum.db`.
+* Restart the server using `docker-compose up -d`.
+* Verify that the backup has been restored successfully.
