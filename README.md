@@ -88,8 +88,8 @@ Data can be migrated **to and from** a server at any time. If you already have a
 
 | Context | With no admin access | With admin access |
 | --- | --- | --- |
-| Publish (Only if admin access is granted via admin password) | ![Publishing with no admin access](./assets/PublishNoAuth.png) | ![Publishing with admin access](./assets/PublishWithAuth.png) |
-| Download (No admin access required) | ![Downloading with no admin access](./assets/DownloadServer.png) | ![Downloading with admin access](./assets/DownloadServer.png) |
+| **Publish** (Only if admin access is granted via admin password) | ![Publishing with no admin access](./assets/PublishNoAuth.png) | ![Publishing with admin access](./assets/PublishWithAuth.png) |
+| **Download** (No admin access required) | ![Downloading with no admin access](./assets/DownloadServer.png) | ![Downloading with admin access](./assets/DownloadServer.png) |
 
 
 
