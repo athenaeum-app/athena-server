@@ -81,6 +81,18 @@ The server behavior is controlled entirely through environment variables. Be sur
 
 ---
 
+## Migration
+Data can be migrated **to and from** a server at any time. If you already have a local library, you can upload all the data to your server using the publish on the library selector. This will override the existing data on the server. Vice versa, you can download all the data from your server to a new local libary using the download option on the library selector.
+- To see the publish button, you must have the local library you wish to publish selected.
+- To see the download button, you must have the library you wish to download selected.
+
+| Context | With no admin access | With admin access |
+| --- | --- | --- |
+| Publish (Only if admin access is granted via admin password) | ![Publishing with no admin access](./assets/PublishNoAuth.png) | ![Publishing with admin access](./assets/PublishWithAuth.png) |
+| Download (No admin access required) | ![Downloading with no admin access](./assets/DownloadServer.png) | ![Downloading with admin access](./assets/DownloadServer.png) |
+
+
+
 ## Data Persistence
 By default, the `docker-compose.yml` binds a local folder (`./athena-data`) to the container's internal `/app/data` directory.
 
