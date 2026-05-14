@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"log"
 	"net/http"
@@ -12,6 +13,14 @@ import (
 	"github.com/athenaeum-app/server/middleware"
 	"github.com/joho/godotenv"
 )
+
+type AthenaStats struct {
+	TotalMoments  int `json:"total_moments"`
+	TotalWords    int `json:"total_words"`
+	TotalTags     int `json:"total_tags"`
+	TotalAssets   int `json:"total_assets"`
+	TotalArchives int `json:"total_archives"`
+}
 
 func setupFolders() {
 	if err := os.MkdirAll("./data/", 0755); err != nil {
@@ -37,6 +46,19 @@ func main() {
 	mux.HandleFunc("GET /api/health", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		fmt.Fprint(w, `{"status":"Athenaeum Server Online!"}`)
+	})
+
+	mux.HandleFunc("GET /api/stats", func(w http.ResponseWriter, r *http.Request) {
+		stats := AthenaStats{
+			TotalMoments:  database.GetTotalMomentsCount(),
+			TotalWords:    database.GetExactWordCount(),
+			TotalTags:     database.GetTotalTagsCount(),
+			TotalAssets:   database.GetTotalAssetsCount(),
+			TotalArchives: database.GetTotalArchivesCount(),
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(stats)
 	})
 
 	mux.HandleFunc("POST /auth/login", auth.Login)

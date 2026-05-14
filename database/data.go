@@ -3,11 +3,70 @@ package database
 import (
 	"database/sql"
 	"log"
+	"strings"
 
 	_ "modernc.org/sqlite"
 )
 
 var DB *sql.DB
+
+func GetTotalMomentsCount() int {
+	var count int
+	err := DB.QueryRow("SELECT COUNT(*) FROM moments WHERE deleted = 0").Scan(&count)
+	if err != nil {
+		log.Println("Error counting moments:", err)
+		return 0
+	}
+	return count
+}
+
+func GetExactWordCount() int {
+	rows, err := DB.Query("SELECT content FROM moments WHERE deleted = 0")
+	if err != nil {
+		log.Println("Error fetching content for word count:", err)
+		return 0
+	}
+	defer rows.Close()
+
+	totalWords := 0
+	for rows.Next() {
+		var content string
+		if err := rows.Scan(&content); err == nil {
+			totalWords += len(strings.Fields(content))
+		}
+	}
+	return totalWords
+}
+
+func GetTotalTagsCount() int {
+	var count int
+	err := DB.QueryRow("SELECT COUNT(*) FROM tags WHERE deleted = 0").Scan(&count)
+	if err != nil {
+		log.Println("Error counting tags:", err)
+		return 0
+	}
+	return count
+}
+
+func GetTotalAssetsCount() int {
+	var count int
+	err := DB.QueryRow("SELECT COUNT(*) FROM assets").Scan(&count)
+	if err != nil {
+		log.Println("Error counting assets:", err)
+		return 0
+	}
+	return count
+}
+
+func GetTotalArchivesCount() int {
+	var count int
+	err := DB.QueryRow("SELECT COUNT(*) FROM archives WHERE deleted = 0").Scan(&count)
+	if err != nil {
+		log.Println("Error counting archives:", err)
+		return 0
+	}
+	return count
+}
 
 func InitDB() {
 	var err error
