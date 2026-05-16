@@ -115,8 +115,8 @@ func main() {
 
 	mux.Handle("GET /api/buffer", middleware.JWTAuth(http.HandlerFunc(GetBuffer)))
 	mux.Handle("POST /api/buffer", middleware.JWTAuth(http.HandlerFunc(PostBuffer)))
-	mux.Handle("PATCH /api/buffer", middleware.JWTAuth(http.HandlerFunc(EditBufferMessage)))
-	mux.Handle("DELETE /api/buffer", middleware.JWTAuth(http.HandlerFunc(DeleteBufferMessage)))
+	mux.Handle("PATCH /api/buffer/{id}", middleware.JWTAuth(http.HandlerFunc(EditBufferMessage)))
+	mux.Handle("DELETE /api/buffer/{id}", middleware.JWTAuth(http.HandlerFunc(DeleteBufferMessage)))
 
 	mux.HandleFunc("GET /api/stats", func(w http.ResponseWriter, r *http.Request) {
 		stats := AthenaStats{
