@@ -12,7 +12,7 @@ import (
 var DB *sql.DB
 
 func GetBufferMessages() ([]models.BufferMessage, error) {
-	rows, err := DB.Query("SELECT id, author_name, content, timestamp FROM buffer_messages WHERE deleted = 0 ORDER BY timestamp ASC LIMIT 100")
+	rows, err := DB.Query("SELECT id, author_name, content, timestamp FROM buffer_messages WHERE deleted = 0 ORDER BY timestamp ASC LIMIT 500")
 	if err != nil {
 		return nil, err
 	}
