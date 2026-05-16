@@ -8,6 +8,7 @@ Athena servers will provide the following if used:
 * **User Authentication:** Lock down access to your libraries with server-specific credentials.
 * **Multi-Device Syncing:** Seamlessly access and push changes to your libraries across an unlimited number of devices.
 * **Library Sharing:** Grant access to your libraries so trusted friends or team members can view or collaborate.
+* **Chat:** Chat with other users on the same library! Just specify a name and start chatting.
 
 ---
 ## Quick Start (Docker Compose)
