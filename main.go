@@ -6,6 +6,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"time"
 
 	"github.com/athenaeum-app/server/action"
 	"github.com/athenaeum-app/server/auth"
@@ -20,6 +21,39 @@ type AthenaStats struct {
 	TotalTags     int `json:"total_tags"`
 	TotalAssets   int `json:"total_assets"`
 	TotalArchives int `json:"total_archives"`
+}
+
+func GetBuffer(w http.ResponseWriter, r *http.Request) {
+	messages, err := database.GetBufferMessages()
+	if err != nil {
+		http.Error(w, "Failed to fetch buffer", http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(messages)
+}
+
+func PostBuffer(w http.ResponseWriter, r *http.Request) {
+	var req struct {
+		AuthorName string `json:"author_name"`
+		Content    string `json:"content"`
+	}
+
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "Invalid payload", http.StatusBadRequest)
+		return
+	}
+
+	// Generate a simple unique ID
+	id := fmt.Sprintf("buf_%d", time.Now().UnixNano())
+
+	if err := database.AddBufferMessage(id, req.AuthorName, req.Content); err != nil {
+		http.Error(w, "Failed to save message", http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusCreated)
 }
 
 func setupFolders() {
@@ -47,6 +81,9 @@ func main() {
 		w.Header().Set("Content-Type", "application/json")
 		fmt.Fprint(w, `{"status":"Athenaeum Server Online!"}`)
 	})
+
+	mux.Handle("GET /api/buffer", middleware.JWTAuth(http.HandlerFunc(action.GetBuffer)))
+	mux.Handle("POST /api/buffer", middleware.JWTAuth(http.HandlerFunc(action.PostBuffer)))
 
 	mux.HandleFunc("GET /api/stats", func(w http.ResponseWriter, r *http.Request) {
 		stats := AthenaStats{

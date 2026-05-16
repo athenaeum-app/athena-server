@@ -5,10 +5,37 @@ import (
 	"log"
 	"strings"
 
+	"github.com/athenaeum-app/server/models"
 	_ "modernc.org/sqlite"
 )
 
 var DB *sql.DB
+
+func GetBufferMessages() ([]models.BufferMessage, error) {
+	rows, err := DB.Query("SELECT id, author_name, content, timestamp FROM buffer_messages WHERE deleted = 0 ORDER BY timestamp ASC LIMIT 100")
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var messages []models.BufferMessage
+	for rows.Next() {
+		var msg models.BufferMessage
+		if err := rows.Scan(&msg.ID, &msg.AuthorName, &msg.Content, &msg.Timestamp); err == nil {
+			messages = append(messages, msg)
+		}
+	}
+
+	if messages == nil {
+		messages = []models.BufferMessage{}
+	}
+	return messages, nil
+}
+
+func AddBufferMessage(id, authorName, content string) error {
+	_, err := DB.Exec("INSERT INTO buffer_messages (id, author_name, content) VALUES (?, ?, ?)", id, authorName, content)
+	return err
+}
 
 func GetTotalMomentsCount() int {
 	var count int
@@ -126,6 +153,14 @@ func InitDB() {
 		CREATE TABLE IF NOT EXISTS media_filters (
 			url TEXT PRIMARY KEY,
 			nickname TEXT NOT NULL
+		);
+
+		CREATE TABLE IF NOT EXISTS buffer_messages (
+		    id TEXT PRIMARY KEY,
+		    author_name TEXT NOT NULL,
+		    content TEXT NOT NULL,
+		    timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
+		    deleted BOOLEAN DEFAULT 0
 		);
 	`
 

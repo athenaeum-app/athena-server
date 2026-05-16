@@ -22,6 +22,38 @@ import (
 
 var libraryVersion atomic.Uint64
 
+func GetBuffer(w http.ResponseWriter, r *http.Request) {
+	messages, err := database.GetBufferMessages()
+	if err != nil {
+		http.Error(w, "Failed to fetch buffer", http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(messages)
+}
+
+func PostBuffer(w http.ResponseWriter, r *http.Request) {
+	var req struct {
+		AuthorName string `json:"author_name"`
+		Content    string `json:"content"`
+	}
+
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "Invalid payload", http.StatusBadRequest)
+		return
+	}
+
+	id := fmt.Sprintf("buf_%d", time.Now().UnixNano())
+
+	if err := database.AddBufferMessage(id, req.AuthorName, req.Content); err != nil {
+		http.Error(w, "Failed to save message", http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusCreated)
+}
+
 func GetVersion(w http.ResponseWriter, r *http.Request) {
 	currentVersion := libraryVersion.Load()
 

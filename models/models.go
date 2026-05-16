@@ -62,3 +62,10 @@ type Action struct {
 	TargetID string          `json:"target_id"`
 	Body     json.RawMessage `json:"body"`
 }
+
+type BufferMessage struct {
+	ID         string `json:"id"`
+	AuthorName string `json:"author_name"`
+	Content    string `json:"content"`
+	Timestamp  string `json:"timestamp"`
+}
