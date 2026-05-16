@@ -24,7 +24,9 @@ type AthenaStats struct {
 }
 
 func GetBuffer(w http.ResponseWriter, r *http.Request) {
-	messages, err := database.GetBufferMessages()
+	before := r.URL.Query().Get("before")
+	after := r.URL.Query().Get("after")
+	messages, err := database.GetBufferMessages(before, after)
 	if err != nil {
 		http.Error(w, "Failed to fetch buffer", http.StatusInternalServerError)
 		return

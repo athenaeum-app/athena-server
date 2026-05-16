@@ -23,7 +23,9 @@ import (
 var libraryVersion atomic.Uint64
 
 func GetBuffer(w http.ResponseWriter, r *http.Request) {
-	messages, err := database.GetBufferMessages()
+	before := r.URL.Query().Get("before")
+	after := r.URL.Query().Get("after")
+	messages, err := database.GetBufferMessages(before, after)
 	if err != nil {
 		http.Error(w, "Failed to fetch buffer", http.StatusInternalServerError)
 		return
@@ -34,24 +36,31 @@ func GetBuffer(w http.ResponseWriter, r *http.Request) {
 }
 
 func PostBuffer(w http.ResponseWriter, r *http.Request) {
-	var req struct {
-		AuthorName string `json:"author_name"`
-		Content    string `json:"content"`
-	}
+    var payload struct {
+        AuthorName string `json:"author_name"`
+        Content    string `json:"content"`
+    }
 
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, "Invalid payload", http.StatusBadRequest)
-		return
-	}
+    // 1. Decode the incoming JSON
+    if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
+        http.Error(w, "Invalid payload", http.StatusBadRequest)
+        return
+    }
 
-	id := fmt.Sprintf("buf_%d", time.Now().UnixNano())
+    // 2. Generate a unique ID for the database
+    // (Using UnixNano ensures it's unique down to the nanosecond)
+    newID := fmt.Sprintf("msg-%d", time.Now().UnixNano())
 
-	if err := database.AddBufferMessage(id, req.AuthorName, req.Content); err != nil {
-		http.Error(w, "Failed to save message", http.StatusInternalServerError)
-		return
-	}
+    // 3. Save it to the database
+    err := database.AddBufferMessage(newID, payload.AuthorName, payload.Content)
+    if err != nil {
+        log.Println("🚨 Failed to insert message:", err)
+        http.Error(w, "Failed to save message", http.StatusInternalServerError)
+        return
+    }
 
-	w.WriteHeader(http.StatusCreated)
+    // 4. Tell the frontend it worked!
+    w.WriteHeader(http.StatusOK)
 }
 
 func GetVersion(w http.ResponseWriter, r *http.Request) {
