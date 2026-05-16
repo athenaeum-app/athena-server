@@ -23,6 +23,36 @@ type AthenaStats struct {
 	TotalArchives int `json:"total_archives"`
 }
 
+// DELETE /api/buffer/{id}
+func DeleteBufferMessage(w http.ResponseWriter, r *http.Request) {
+	id := r.PathValue("id")
+	_, err := database.DB.Exec("UPDATE buffer_messages SET deleted = 1 WHERE id = ?", id)
+	if err != nil {
+		http.Error(w, err.Error(), 500)
+		return
+	}
+	w.WriteHeader(http.StatusOK)
+}
+
+// PATCH /api/buffer/{id}
+func EditBufferMessage(w http.ResponseWriter, r *http.Request) {
+	id := r.PathValue("id")
+	var body struct {
+		Content string `json:"content"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		http.Error(w, "Invalid payload", http.StatusBadRequest)
+		return
+	}
+
+	_, err := database.DB.Exec("UPDATE buffer_messages SET content = ? WHERE id = ?", body.Content, id)
+	if err != nil {
+		http.Error(w, err.Error(), 500)
+		return
+	}
+	w.WriteHeader(http.StatusOK)
+}
+
 func GetBuffer(w http.ResponseWriter, r *http.Request) {
 	before := r.URL.Query().Get("before")
 	after := r.URL.Query().Get("after")
@@ -47,7 +77,6 @@ func PostBuffer(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Generate a simple unique ID
 	id := fmt.Sprintf("buf_%d", time.Now().UnixNano())
 
 	if err := database.AddBufferMessage(id, req.AuthorName, req.Content); err != nil {
@@ -84,8 +113,10 @@ func main() {
 		fmt.Fprint(w, `{"status":"Athenaeum Server Online!"}`)
 	})
 
-	mux.Handle("GET /api/buffer", middleware.JWTAuth(http.HandlerFunc(action.GetBuffer)))
-	mux.Handle("POST /api/buffer", middleware.JWTAuth(http.HandlerFunc(action.PostBuffer)))
+	mux.Handle("GET /api/buffer", middleware.JWTAuth(http.HandlerFunc(GetBuffer)))
+	mux.Handle("POST /api/buffer", middleware.JWTAuth(http.HandlerFunc(PostBuffer)))
+	mux.Handle("PATCH /api/buffer", middleware.JWTAuth(http.HandlerFunc(EditBufferMessage)))
+	mux.Handle("DELETE /api/buffer", middleware.JWTAuth(http.HandlerFunc(DeleteBufferMessage)))
 
 	mux.HandleFunc("GET /api/stats", func(w http.ResponseWriter, r *http.Request) {
 		stats := AthenaStats{

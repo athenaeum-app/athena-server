@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"log"
 	"strings"
+	"time"
 
 	"github.com/athenaeum-app/server/models"
 	_ "modernc.org/sqlite"
@@ -12,58 +13,67 @@ import (
 var DB *sql.DB
 
 func GetBufferMessages(before string, after string) ([]models.BufferMessage, error) {
-    var rows *sql.Rows
-    var err error
+	var rows *sql.Rows
+	var err error
 
-    if after != "" {
-        rows, err = DB.Query(`
-            SELECT id, author_name, content, timestamp
-            FROM buffer_messages
-            WHERE deleted = 0 AND timestamp > ?
-            ORDER BY timestamp ASC
-        `, after)
-    } else if before != "" {
-        rows, err = DB.Query(`
-            SELECT * FROM (
-                SELECT id, author_name, content, timestamp
-                FROM buffer_messages
-                WHERE deleted = 0 AND timestamp < ?
-                ORDER BY timestamp DESC
-                LIMIT 50
-            ) ORDER BY timestamp ASC
-        `, before)
-    } else {
-        rows, err = DB.Query(`
-            SELECT * FROM (
-                SELECT id, author_name, content, timestamp
-                FROM buffer_messages
-                WHERE deleted = 0
-                ORDER BY timestamp DESC
-                LIMIT 50
-            ) ORDER BY timestamp ASC
-        `)
-    }
+	if after != "" {
+		rows, err = DB.Query(`
+			SELECT id, author_name, content, timestamp
+			FROM buffer_messages
+			WHERE deleted = 0 AND timestamp > ?
+			ORDER BY timestamp ASC
+			LIMIT 50
+		`, after)
+	} else if before != "" {
+		rows, err = DB.Query(`
+			SELECT * FROM (
+				SELECT id, author_name, content, timestamp
+				FROM buffer_messages
+				WHERE deleted = 0 AND timestamp < ?
+				ORDER BY timestamp DESC
+				LIMIT 50
+			) ORDER BY timestamp ASC
+		`, before)
+	} else {
+		rows, err = DB.Query(`
+			SELECT * FROM (
+				SELECT id, author_name, content, timestamp
+				FROM buffer_messages
+				WHERE deleted = 0
+				ORDER BY timestamp DESC
+				LIMIT 50
+			) ORDER BY timestamp ASC
+		`)
+	}
 
-    if err != nil {
-        return nil, err
-    }
-    defer rows.Close()
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
 
-    var messages []models.BufferMessage
-    for rows.Next() {
-        var msg models.BufferMessage
-        if err := rows.Scan(&msg.ID, &msg.AuthorName, &msg.Content, &msg.Timestamp); err != nil {
-            return nil, err
-        }
-        messages = append(messages, msg)
-    }
+	var messages []models.BufferMessage
+	for rows.Next() {
+		var msg models.BufferMessage
+		if err := rows.Scan(&msg.ID, &msg.AuthorName, &msg.Content, &msg.Timestamp); err != nil {
+			return nil, err
+		}
+		messages = append(messages, msg)
+	}
 
-    return messages, nil
+	return messages, nil
 }
 
+
+
 func AddBufferMessage(id, authorName, content string) error {
-    _, err := DB.Exec("INSERT INTO buffer_messages (id, author_name, content) VALUES (?, ?, ?)", id, authorName, content)
-    return err
+	timestamp := time.Now().Format(time.RFC3339)
+
+	_, err := DB.Exec(`
+		INSERT INTO buffer_messages (id, author_name, content, timestamp)
+		VALUES (?, ?, ?, ?)
+	`, id, authorName, content, timestamp)
+
+	return err
 }
 
 func GetTotalMomentsCount() int {

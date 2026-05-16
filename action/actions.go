@@ -22,47 +22,6 @@ import (
 
 var libraryVersion atomic.Uint64
 
-func GetBuffer(w http.ResponseWriter, r *http.Request) {
-	before := r.URL.Query().Get("before")
-	after := r.URL.Query().Get("after")
-	messages, err := database.GetBufferMessages(before, after)
-	if err != nil {
-		http.Error(w, "Failed to fetch buffer", http.StatusInternalServerError)
-		return
-	}
-
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(messages)
-}
-
-func PostBuffer(w http.ResponseWriter, r *http.Request) {
-    var payload struct {
-        AuthorName string `json:"author_name"`
-        Content    string `json:"content"`
-    }
-
-    // 1. Decode the incoming JSON
-    if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
-        http.Error(w, "Invalid payload", http.StatusBadRequest)
-        return
-    }
-
-    // 2. Generate a unique ID for the database
-    // (Using UnixNano ensures it's unique down to the nanosecond)
-    newID := fmt.Sprintf("msg-%d", time.Now().UnixNano())
-
-    // 3. Save it to the database
-    err := database.AddBufferMessage(newID, payload.AuthorName, payload.Content)
-    if err != nil {
-        log.Println("🚨 Failed to insert message:", err)
-        http.Error(w, "Failed to save message", http.StatusInternalServerError)
-        return
-    }
-
-    // 4. Tell the frontend it worked!
-    w.WriteHeader(http.StatusOK)
-}
-
 func GetVersion(w http.ResponseWriter, r *http.Request) {
 	currentVersion := libraryVersion.Load()
 
